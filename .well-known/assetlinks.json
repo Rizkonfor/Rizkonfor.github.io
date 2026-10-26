@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.rizkonfor.twa",
+        "sha256_cert_fingerprints": ["1D:FF:AF:E2:BF:A4:F5:E8:8B:6D:BE:0F:2F:85:AC:4C:2D:11:1C:1A:87:3B:2F:62:4C:A0:82:E0:81:30:DE:71"]
+      }
+    }]
