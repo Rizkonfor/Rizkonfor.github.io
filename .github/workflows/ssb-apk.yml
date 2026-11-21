@@ -1,0 +1,50 @@
+name: APK Academy Pro Nova
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ssb-android/**'
+      - '.github/workflows/ssb-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssb-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Rakit APK
+        working-directory: ssb-android
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Simpan APK ke GitHub Pages (ssb/AcademyProNova.apk)
+        run: |
+          cp ssb-android/app/build/outputs/apk/debug/app-debug.apk ssb/AcademyProNova.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ssb/AcademyProNova.apk
+          git commit -m "APK Academy Pro Nova: rakitan otomatis"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AcademyProNova-apk
+          path: ssb/AcademyProNova.apk
