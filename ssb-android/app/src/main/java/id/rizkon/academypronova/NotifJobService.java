@@ -74,8 +74,8 @@ public class NotifJobService extends JobService {
             public void run() {
                 try {
                     check(getApplicationContext());
-                } catch (Exception ignored) {
-                    // Coba lagi pada jadwal berikutnya.
+                } catch (Throwable t) {
+                    android.util.Log.w("SSB", "Cek notifikasi gagal, dicoba lagi nanti", t);
                 }
                 jobFinished(params, false);
             }

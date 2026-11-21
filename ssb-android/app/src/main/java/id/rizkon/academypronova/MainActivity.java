@@ -50,7 +50,11 @@ public class MainActivity extends Activity {
         cookies.setAcceptCookie(true);
         cookies.setAcceptThirdPartyCookies(web, true);
 
-        NotifJobService.ensureChannel(this);
+        try {
+            NotifJobService.ensureChannel(this);
+        } catch (Throwable t) {
+            android.util.Log.e("SSB", "Kanal notifikasi gagal dibuat", t);
+        }
         web.addJavascriptInterface(new NotifBridge(), "SSBAndroid");
 
         web.setWebViewClient(new WebViewClient() {
@@ -91,6 +95,16 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+
+        // Uji otomatis di emulator (GitHub Actions): daftarkan tugas notifikasi tanpa login.
+        if (getIntent() != null && getIntent().getBooleanExtra("ssb_selftest", false)) {
+            try {
+                NotifJobService.schedule(this);
+                android.util.Log.i("SSB", "SSB_SELFTEST_OK");
+            } catch (Throwable t) {
+                android.util.Log.e("SSB", "SSB_SELFTEST_FAIL", t);
+            }
+        }
 
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
@@ -146,6 +160,14 @@ public class MainActivity extends Activity {
     public class NotifBridge {
         @JavascriptInterface
         public void setNotif(String execUrl, String token, String role) {
+            try {
+                applyNotif(execUrl, token, role);
+            } catch (Throwable t) {
+                android.util.Log.e("SSB", "Pengaturan notifikasi gagal", t);
+            }
+        }
+
+        private void applyNotif(String execUrl, String token, String role) {
             final boolean on = token != null && token.length() >= 24
                     && execUrl != null && execUrl.startsWith("https://script.google.com/");
             SharedPreferences sp = getSharedPreferences(NotifJobService.PREFS, MODE_PRIVATE);
@@ -164,11 +186,15 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (on) {
-                        NotifJobService.schedule(MainActivity.this);
-                        askNotificationPermission();
-                    } else {
-                        NotifJobService.cancel(MainActivity.this);
+                    try {
+                        if (on) {
+                            NotifJobService.schedule(MainActivity.this);
+                            askNotificationPermission();
+                        } else {
+                            NotifJobService.cancel(MainActivity.this);
+                        }
+                    } catch (Throwable t) {
+                        android.util.Log.e("SSB", "Jadwal notifikasi gagal", t);
                     }
                 }
             });

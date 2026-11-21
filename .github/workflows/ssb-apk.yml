@@ -30,9 +30,41 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Pakai kunci tanda tangan yang sama dengan rakitan sebelumnya
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: ssb-debug-keystore-v1
+
       - name: Rakit APK
         working-directory: ssb-android
         run: gradle assembleDebug --no-daemon --stacktrace || (sleep 45 && gradle assembleDebug --no-daemon --stacktrace)
+
+      - name: Aktifkan akselerasi emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Uji APK di emulator Android 14 (harus tidak crash)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r ssb-android/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n id.rizkon.academypronova/.MainActivity --ez ssb_selftest true
+            sleep 20
+            adb shell cmd jobscheduler run -f id.rizkon.academypronova 1001 || true
+            sleep 10
+            adb logcat -d > logcat.txt || true
+            grep -E "SSB_SELFTEST|FATAL EXCEPTION|AndroidRuntime|SSB " logcat.txt | head -60 || true
+            if grep -q "FATAL EXCEPTION" logcat.txt; then echo "APP CRASH"; exit 1; fi
+            grep -q "SSB_SELFTEST_OK" logcat.txt
 
       - name: Simpan APK ke GitHub Pages (ssb/AcademyProNova.apk)
         run: |
