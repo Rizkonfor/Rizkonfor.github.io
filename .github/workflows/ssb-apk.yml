@@ -32,7 +32,7 @@ jobs:
 
       - name: Rakit APK
         working-directory: ssb-android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace || (sleep 45 && gradle assembleDebug --no-daemon --stacktrace)
 
       - name: Simpan APK ke GitHub Pages (ssb/AcademyProNova.apk)
         run: |
