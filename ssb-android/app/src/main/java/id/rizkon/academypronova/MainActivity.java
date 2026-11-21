@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
+import android.webkit.WebResourceError;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -77,6 +78,13 @@ public class MainActivity extends Activity {
                 }
                 return true;
             }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) {
+                    showOffline();
+                }
+            }
         });
 
         web.setWebChromeClient(new WebChromeClient() {
@@ -111,6 +119,20 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl(APP_URL);
         }
+    }
+
+    private void showOffline() {
+        String html = "<!doctype html><html lang='id'><head><meta charset='utf-8'>"
+                + "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                + "<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;"
+                + "background:#0B1526;color:#E2E8F0;font-family:sans-serif;text-align:center;padding:24px;box-sizing:border-box}"
+                + "h1{font-size:20px;margin:0 0 8px}p{font-size:15px;line-height:1.5;color:#CBD5E1;margin:0 0 20px}"
+                + "a{display:inline-block;padding:14px 24px;border-radius:10px;background:#16A34A;color:#fff;"
+                + "font-weight:700;text-decoration:none}</style></head><body><div>"
+                + "<h1>Tidak ada koneksi internet</h1>"
+                + "<p>Aplikasi butuh internet untuk memuat data akademi. Periksa Wi-Fi atau data seluler, lalu coba lagi.</p>"
+                + "<a href='" + APP_URL + "'>Coba lagi</a></div></body></html>";
+        web.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
     }
 
     @Override
