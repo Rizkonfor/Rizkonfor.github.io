@@ -1,13 +1,18 @@
 package id.rizkon.academypronova;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -44,6 +49,9 @@ public class MainActivity extends Activity {
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
         cookies.setAcceptThirdPartyCookies(web, true);
+
+        NotifJobService.ensureChannel(this);
+        web.addJavascriptInterface(new NotifBridge(), "SSBAndroid");
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -132,6 +140,46 @@ public class MainActivity extends Activity {
         }
         lastBackAt = now;
         Toast.makeText(this, "Tekan Kembali sekali lagi untuk keluar", Toast.LENGTH_SHORT).show();
+    }
+
+    /** Dipanggil halaman pembungkus saat pengguna masuk atau keluar akun. */
+    public class NotifBridge {
+        @JavascriptInterface
+        public void setNotif(String execUrl, String token, String role) {
+            final boolean on = token != null && token.length() >= 24
+                    && execUrl != null && execUrl.startsWith("https://script.google.com/");
+            SharedPreferences sp = getSharedPreferences(NotifJobService.PREFS, MODE_PRIVATE);
+            SharedPreferences.Editor ed = sp.edit();
+            if (on) {
+                if (!token.equals(sp.getString("token", ""))) {
+                    ed.putLong("registered", System.currentTimeMillis());
+                    ed.putLong("maxAt", 0L);
+                    ed.putString("seen", "");
+                }
+                ed.putString("url", execUrl).putString("token", token).putString("role", role == null ? "" : role);
+            } else {
+                ed.remove("token");
+            }
+            ed.apply();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (on) {
+                        NotifJobService.schedule(MainActivity.this);
+                        askNotificationPermission();
+                    } else {
+                        NotifJobService.cancel(MainActivity.this);
+                    }
+                }
+            });
+        }
+    }
+
+    private void askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 11);
+        }
     }
 
     @Override

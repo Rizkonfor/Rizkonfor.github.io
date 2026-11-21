@@ -20,6 +20,17 @@
 <script src="config.js"></script>
 <script>
   document.getElementById('app').src = window.SSB_WEB_APP_URL;
+  // Token notifikasi dari aplikasi (di dalam bingkai Google) diteruskan ke aplikasi Android.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'ssb-notif') return;
+    var host = '';
+    try { host = new URL(e.origin).hostname; } catch (err) { return; }
+    if (!/\.googleusercontent\.com$/.test(host) && host !== 'script.google.com') return;
+    if (window.SSBAndroid && typeof window.SSBAndroid.setNotif === 'function') {
+      window.SSBAndroid.setNotif(window.SSB_WEB_APP_URL, d.token || '', d.role || '');
+    }
+  });
 </script>
 </body>
 </html>
